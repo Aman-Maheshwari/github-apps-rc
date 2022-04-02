@@ -2,9 +2,10 @@ import { IHttp, ILogger } from '@rocket.chat/apps-engine/definition/accessors';
 
 const BaseHost = 'https://github.com/';
 const BaseApiHost = 'https://api.github.com/repos/';
+const base = 'https://api.github.com/';
 
 export class GithubSDK {
-    constructor(private readonly http: IHttp, private readonly accessToken, public logger :ILogger) { }
+    constructor(private readonly http: IHttp, private readonly accessToken, public logger: ILogger) { }
 
     public createWebhook(repoName: string, webhookUrl: string) {
         return this.post(BaseApiHost + repoName + '/hooks', {
@@ -17,9 +18,13 @@ export class GithubSDK {
         });
     }
 
+    public fetchIssue(owner: string, repoName: string, issueNo: string) {
+        return this.get(`${BaseApiHost}${owner}/${repoName}/issues/${issueNo}`)
+    }
+
     public getRepos(username: string) {
-        this.logger.debug("over here")
-        return this.get('https://api.github.com/' + 'users/' + username + '/repos');
+        // this.logger.debug("over here")
+        return this.get(`${base}users/${username}/repos`);
     }
 
     private async post(url: string, data: any): Promise<any> {
@@ -41,14 +46,15 @@ export class GithubSDK {
     }
 
     private async get(url: string): Promise<any> {
-        const response = await this.http.get(url,{
+        const response = await this.http.get(url, {
             headers: {
                 // 'Authorization': `Bearer ${this.accessToken}`,
                 // 'Content-Type': 'application/json',
-                Accept:'application/json',
+                Accept: 'application/json',
                 // 'User-Agent': 'Rocket.Chat-Apps-Engine',
-            }});
-        this.logger.debug("over here resp = ", response);
+            }
+        });
+        // this.logger.debug("over here resp = ", response);
         // If it isn't a 2xx code, something wrong happened
         if (!response.statusCode.toString().startsWith('2')) {
             throw response;

@@ -10,7 +10,8 @@ enum Command {
     Connect = 'connect',
     SetToken = 'set-token',
     User = 'user',
-    Help = 'help'
+    Help = 'help',
+    Issue = 'issue',
 }
 
 export class GithubSlashcommand implements ISlashCommand {
@@ -41,7 +42,26 @@ export class GithubSlashcommand implements ISlashCommand {
             case Command.Help:
                 await this.processHelpCommand(context, read, modify, http, persis);
                 break;
+
+            case Command.Issue:
+                await this.processIssueCommand(context, read, modify, http, persis);
+                break;
         }
+    }
+
+
+    private async processHelpCommand(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+
+        let information: string = '';
+
+        information += " ``` "
+        information += "  1. Fetch user repositories - /github user {username} \n";
+        information += "  2. Fetch a issue - /github get-issue {owner} {repo} {issue no.}  \n";
+        information += "  3. Connect to repository - /github connect {repo-url}  \n";
+        information += "  4. Set token - /github set-token token \n";
+        information += " ``` "
+
+        await sendNotification(information, read, modify, context.getSender(), context.getRoom());
     }
 
     private async processConnectCommand(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
@@ -131,7 +151,7 @@ export class GithubSlashcommand implements ISlashCommand {
             let resppp: string = " ``` ";
             userRepos.map((repo) => {
                 const p: githubRepoUser = {
-                    'repo-name': repo.full_name ,
+                    'repo-name': repo.full_name,
                     'repo-url': repo.html_url,
                 }
                 resppp += JSON.stringify(p) + '\n';
@@ -147,17 +167,64 @@ export class GithubSlashcommand implements ISlashCommand {
         }
     }
 
-    private async processHelpCommand(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+    private async processIssueCommand(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+        const [, owner, repoName, issueNo] = context.getArguments();
+        // const persistence = new AppPersistence(persis, read.getPersistenceReader());
+        const accessToken = '123' //await persistence.getUserAccessToken(context.getSender());
 
-        let information: string = '';
+        // if (!accessToken) {
+        //     await sendNotification(
+        //         'You haven\'t configured your access key yet. Please run `/github set-token YOUR_ACCESS_TOKEN`',
+        //         read,
+        //         modify,
+        //         context.getSender(),
+        //         context.getRoom(),
+        //     );
+        //     return;
+        // }
+        const sdk = new GithubSDK(http, accessToken, this.app.getLogger());
 
-        information += " ``` "
-        information += "  1. Fetch user repositories - /github user {username} \n";
-        information += "  2. Fetch a issue - /github get-issue {owner} {repo} {issue no.}  \n";
-        information += "  3. Connect to repository - /github connect {repo-url}  \n";
-        information += "  4. Set token - /github set-token token \n";
-        information += " ``` "
+        interface FetchIssue {
+            number: string,
+            user: { login: string },
+            state: string,
+            created_at: string,
+            repository_url: string,
+            url: string,
+            body: string
+        };
 
-        await sendNotification(information, read, modify, context.getSender(), context.getRoom());
+        try {
+            const data = await sdk.fetchIssue(owner, repoName, issueNo) as FetchIssue;
+            this.app.getLogger().debug(data);
+            let p: string = ""
+            const regex: any = /!\[(.*?)\]\((.*?)\)/g;
+            let m: any;
+            let arr: string[] = [];
+            while ((m = regex.exec(data.body)) !== null) {
+                if (m.index === regex.lastIndex) {
+                    regex.lastIndex++;
+                }
+                arr.push(m[2])
+            }
+
+            this.app.getLogger().debug("arr = ", arr);
+            p += " ``` "
+            p += `issue number - ${data.number} \n`;
+            p += `created by   - ${data.user.login} \n`;
+            p += `state        - ${data.state} \n`;
+            p += `created at   - ${data.created_at} \n`;
+            p += `repo url     - ${data.repository_url} \n`;
+            p += `issue url    - ${data.url} \n`;
+            p += `description  - ${data.body} \n`;
+            p += " ``` "
+
+            await sendNotification(p, read, modify, context.getSender(), context.getRoom(), arr);
+        } catch (err) {
+            console.error(err);
+            await sendNotification(err, read, modify, context.getSender(), context.getRoom());
+        }
     }
 }
+
+// /github issue RocketChat Rocket.Chat 25029
