@@ -9,6 +9,8 @@ import { getRepoName, GithubSDK } from '../lib/sdk';
 enum Command {
     Connect = 'connect',
     SetToken = 'set-token',
+    User = 'user',
+    Help = 'help'
 }
 
 export class GithubSlashcommand implements ISlashCommand {
@@ -17,11 +19,12 @@ export class GithubSlashcommand implements ISlashCommand {
     public i18nDescription = 'slashcommand_description';
     public providesPreview = false;
 
-    public constructor(private readonly app: AppsGithubApp) {}
+    public constructor(private readonly app: AppsGithubApp) { }
 
     public async executor(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
         const [command] = context.getArguments();
 
+        this.app.getLogger().log("command = ", command);
         switch (command) {
             case Command.Connect:
                 await this.processConnectCommand(context, read, modify, http, persis);
@@ -29,6 +32,14 @@ export class GithubSlashcommand implements ISlashCommand {
 
             case Command.SetToken:
                 await this.processSetTokenCommand(context, read, modify, http, persis);
+                break;
+
+            case Command.User:
+                await this.processUserCommand(context, read, modify, http, persis);
+                break;
+
+            case Command.Help:
+                await this.processHelpCommand(context, read, modify, http, persis);
                 break;
         }
     }
@@ -62,7 +73,7 @@ export class GithubSlashcommand implements ISlashCommand {
             return;
         }
 
-        const sdk = new GithubSDK(http, accessToken);
+        const sdk = new GithubSDK(http, accessToken, this.app.getLogger());
 
         try {
             await sdk.createWebhook(repoName, await getWebhookUrl(this.app));
@@ -90,5 +101,63 @@ export class GithubSlashcommand implements ISlashCommand {
         await persistence.setUserAccessToken(accessToken, context.getSender());
 
         await sendNotification('Successfully stored your key', read, modify, context.getSender(), context.getRoom());
+    }
+
+    private async processUserCommand(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+        const [, userName] = context.getArguments();
+        // const persistence = new AppPersistence(persis, read.getPersistenceReader());
+        const accessToken = '123' //await persistence.getUserAccessToken(context.getSender());
+
+        // if (!accessToken) {
+        //     await sendNotification(
+        //         'You haven\'t configured your access key yet. Please run `/github set-token YOUR_ACCESS_TOKEN`',
+        //         read,
+        //         modify,
+        //         context.getSender(),
+        //         context.getRoom(),
+        //     );
+        //     return;
+        // }
+        const sdk = new GithubSDK(http, accessToken, this.app.getLogger());
+        interface githubRepoUser {
+            'repo-name': string,
+            'repo-url': string,
+
+        }
+        try {
+            const userRepos = await sdk.getRepos(userName) as Array<{ full_name: string, html_url: string }>;
+
+            let repositoryInfo: githubRepoUser[] = [];
+            let resppp: string = " ``` ";
+            userRepos.map((repo) => {
+                const p: githubRepoUser = {
+                    'repo-name': repo.full_name ,
+                    'repo-url': repo.html_url,
+                }
+                resppp += JSON.stringify(p) + '\n';
+                repositoryInfo.push(p);
+            })
+            resppp += " ``` ";
+            // resppp = JSON.stringify(resppp);
+            await sendNotification(` ${resppp} `, read, modify, context.getSender(), context.getRoom());
+
+        } catch (err) {
+            console.error(err);
+            await sendNotification(err, read, modify, context.getSender(), context.getRoom());
+        }
+    }
+
+    private async processHelpCommand(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+
+        let information: string = '';
+
+        information += " ``` "
+        information += "  1. Fetch user repositories - /github user {username} \n";
+        information += "  2. Fetch a issue - /github get-issue {owner} {repo} {issue no.}  \n";
+        information += "  3. Connect to repository - /github connect {repo-url}  \n";
+        information += "  4. Set token - /github set-token token \n";
+        information += " ``` "
+
+        await sendNotification(information, read, modify, context.getSender(), context.getRoom());
     }
 }

@@ -4,12 +4,13 @@
     "requiredApiVersion": "^1.4.0",
     "iconFile": "icon.png",
     "author": {
-        "name": "Douglas Gubert",
-        "homepage": "https://twitter.com/d_gubert",
-        "support": "page"
+        "name": "Prototype github",
+        "homepage": "NA",
+        "support": "NA"
     },
     "name": "Apps.Github",
     "nameSlug": "appsgithub",
     "classFile": "AppsGithubApp.ts",
-    "description": "Integrates GitHub with your Rocket.Chat"
+    "description": "Integrates GitHub with your RC",
+    "implements": []
 }
