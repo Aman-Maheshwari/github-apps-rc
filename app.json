@@ -1,13 +1,39 @@
 {
     "id": "3c3ed60d-774b-4d1c-a547-6fc42a5a87c6",
     "version": "0.0.1",
-    "requiredApiVersion": "^1.4.0",
+    "requiredApiVersion": "^1.19.0",
     "iconFile": "icon.png",
     "author": {
         "name": "Prototype github",
         "homepage": "NA",
         "support": "NA"
     },
+    "permissions": [
+        {
+            "name": "ui.registerButtons"
+        },
+        {
+            "name": "api"
+        },
+        {
+            "name": "slashcommand"
+        },
+        {
+            "name": "networking"
+        },
+        {
+            "name": "message.write"
+        },
+        {
+            "name": "user.read"
+        },
+        {
+            "name": "ui.interact"
+        },
+        {
+            "name": "persistence"
+        }
+    ],
     "name": "Apps.Github",
     "nameSlug": "appsgithub",
     "classFile": "AppsGithubApp.ts",

@@ -1,6 +1,8 @@
 import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
 import { ISlashCommand, SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
+import { BlockType, ButtonStyle, IImageBlock } from '@rocket.chat/apps-engine/definition/uikit';
 import { AppsGithubApp } from '../AppsGithubApp';
+import { createModalForIssue } from '../lib/helpers/createModalForIssue';
 import { getWebhookUrl } from '../lib/helpers/getWebhookUrl';
 import { sendNotification } from '../lib/helpers/sendNotification';
 import { AppPersistence } from '../lib/persistence';
@@ -12,6 +14,7 @@ enum Command {
     User = 'user',
     Help = 'help',
     Issue = 'issue',
+    Create = 'create',
 }
 
 export class GithubSlashcommand implements ISlashCommand {
@@ -22,7 +25,7 @@ export class GithubSlashcommand implements ISlashCommand {
 
     public constructor(private readonly app: AppsGithubApp) { }
 
-    public async executor(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+    public async executor(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence,): Promise<void> {
         const [command] = context.getArguments();
 
         this.app.getLogger().log("command = ", command);
@@ -46,6 +49,10 @@ export class GithubSlashcommand implements ISlashCommand {
             case Command.Issue:
                 await this.processIssueCommand(context, read, modify, http, persis);
                 break;
+            case Command.Create:
+                await this.processCreateIssueCommand(context, read, modify, http, persis);
+                break;
+
         }
     }
 
@@ -223,6 +230,34 @@ export class GithubSlashcommand implements ISlashCommand {
         } catch (err) {
             console.error(err);
             await sendNotification(err, read, modify, context.getSender(), context.getRoom());
+        }
+    }
+
+    private async processCreateIssueCommand(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+        const [, owner, repoName, title] = context.getArguments();
+        const triggerId = context.getTriggerId();
+        const data = {
+            room: (context.getRoom() as any).value,
+            threadId: context.getThreadId()
+        }; // the current room
+        // const persistence = new AppPersistence(persis, read.getPersistenceReader());
+        const accessToken = '123' //await persistence.getUserAccessToken(context.getSender());
+        const sdk = new GithubSDK(http, accessToken, this.app.getLogger());
+
+        try {
+            const sender = await read.getUserReader().getById('rocket.cat');
+
+            this.app.getLogger().debug("trigger id = ", triggerId);
+
+            if (triggerId) {
+                const mdl = await createModalForIssue({ id: 'modalid', persistence: persis, modify, data });
+                this.app.getLogger().debug("modal id = ", mdl);
+                await modify.getUiController().openModalView(mdl, { triggerId }, context.getSender());
+            }
+            // await sendNotification(p, read, modify, context.getSender(), context.getRoom(), arr);
+        } catch (err) {
+            console.error(err);
+            // await sendNotification(err, read, modify, context.getSender(), context.getRoom());
         }
     }
 }

@@ -18,26 +18,45 @@ export class GithubSDK {
         });
     }
 
+    public async createIssue(
+        owner: string,
+        repoName: string,
+        title: { ititle: string, },
+        body: { idesc: string }) {
+        return this.post(`${BaseApiHost}${owner}/${repoName}/issues`, {
+            owner:owner,
+            repo: repoName,
+            title: title.ititle,
+            body: body.idesc
+        });
+
+    }
+
     public fetchIssue(owner: string, repoName: string, issueNo: string) {
         return this.get(`${BaseApiHost}${owner}/${repoName}/issues/${issueNo}`)
     }
 
     public getRepos(username: string) {
-        // this.logger.debug("over here")
+        this.logger.debug("over here")
         return this.get(`${base}users/${username}/repos`);
     }
 
     private async post(url: string, data: any): Promise<any> {
+        // data = JSON.stringify(data)
+        this.logger.debug('stringify data = ', data);
         const response = await this.http.post(url, {
             headers: {
-                'Authorization': `Bearer ${this.accessToken}`,
+                'Authorization': `Bearer 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`,
                 'Content-Type': 'application/json',
-                'User-Agent': 'Rocket.Chat-Apps-Engine',
+                Accept:'application/vnd.github.v3+json'
+                // 'User-Agent': 'Rocket.Chat-Apps-Engine',
             },
             data,
+
         });
 
         // If it isn't a 2xx code, something wrong happened
+        this.logger.debug('response = ', response);
         if (!response.statusCode.toString().startsWith('2')) {
             throw response;
         }
