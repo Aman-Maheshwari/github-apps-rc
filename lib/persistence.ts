@@ -4,7 +4,7 @@ import { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
 import { IUser } from '@rocket.chat/apps-engine/definition/users';
 
 export class AppPersistence {
-    constructor(private readonly persistence: IPersistence, private readonly persistenceRead: IPersistenceRead) {}
+    constructor(private readonly persistence: IPersistence, private readonly persistenceRead: IPersistenceRead) { }
 
     public async connectRepoToRoom(repoName: string, room: IRoom): Promise<void> {
         const roomAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.ROOM, room.id);
@@ -38,5 +38,21 @@ export class AppPersistence {
         const [result] = await this.persistenceRead.readByAssociations([userAssociation, typeAssociation]);
 
         return result ? (result as any).accessToken : undefined;
+    }
+
+    public async storePreviousCommand(command: string | string[], user: IUser): Promise<void> {
+        const userAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, user.id);
+        const commandAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'command');
+
+        await this.persistence.updateByAssociations([userAssociation, commandAssociation], { command }, true);
+    }
+
+    public async getPreviousCommand(user: IUser): Promise<string | undefined> {
+        const userAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, user.id);
+        const commandAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'command');
+
+        const [result] = await this.persistenceRead.readByAssociations([userAssociation, commandAssociation]);
+
+        return result ? (result as any).command : undefined;
     }
 }

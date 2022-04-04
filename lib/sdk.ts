@@ -24,7 +24,7 @@ export class GithubSDK {
         title: { ititle: string, },
         body: { idesc: string }) {
         return this.post(`${BaseApiHost}${owner}/${repoName}/issues`, {
-            owner:owner,
+            owner: owner,
             repo: repoName,
             title: title.ititle,
             body: body.idesc
@@ -32,8 +32,9 @@ export class GithubSDK {
 
     }
 
-    public fetchIssue(owner: string, repoName: string, issueNo: string) {
-        return this.get(`${BaseApiHost}${owner}/${repoName}/issues/${issueNo}`)
+    public fetchIssue(owner: string, repoName: string, issueNo: string, page: string) {
+        this.logger.debug('fetch issue for page = ', page);
+        return this.get(`${BaseApiHost}${owner}/${repoName}/issues?page=${page}`)
     }
 
     public getRepos(username: string) {
@@ -48,7 +49,7 @@ export class GithubSDK {
             headers: {
                 'Authorization': `Bearer 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`,
                 'Content-Type': 'application/json',
-                Accept:'application/vnd.github.v3+json'
+                Accept: 'application/vnd.github.v3+json'
                 // 'User-Agent': 'Rocket.Chat-Apps-Engine',
             },
             data,
