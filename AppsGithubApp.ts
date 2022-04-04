@@ -12,11 +12,30 @@ import {
 import { ApiSecurity, ApiVisibility } from '@rocket.chat/apps-engine/definition/api';
 import { App } from '@rocket.chat/apps-engine/definition/App';
 import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
+import { ISetting, SettingType } from '@rocket.chat/apps-engine/definition/settings';
 import { UIKitBlockInteractionContext, UIKitViewSubmitInteractionContext } from '@rocket.chat/apps-engine/definition/uikit';
 import { WebhookEndpoint } from './endpoints/webhook';
 import { GithubSDK } from './lib/sdk';
 import { GithubSlashcommand } from './slashcommands/github';
 
+const settings: Array<ISetting> = [
+    {
+        id: 'github',
+        public: true,
+        type: SettingType.BOOLEAN,
+        packageValue: '',
+        i18nLabel: 'bot_username',
+        required: true,
+    },
+    {
+        id: 'test-setting2',
+        public: true,
+        type: SettingType.STRING,
+        packageValue: '',
+        i18nLabel: 'dialogflow_project_id',
+        required: true,
+    },
+]
 export class AppsGithubApp extends App {
     constructor(info: IAppInfo, logger: ILogger, accessors: IAppAccessors) {
         super(info, logger, accessors);
@@ -90,18 +109,10 @@ export class AppsGithubApp extends App {
         this.getLogger().debug("data view = ", data.view);
         try {
             const sdk = new GithubSDK(http, '123', this.getLogger());
-            await sdk.createIssue('Aman-Maheshwari', 'getwork',state['issue-title'],state['issue-description']);
+            await sdk.createIssue('Aman-Maheshwari', 'getwork', state['issue-title'], state['issue-description']);
         } catch (error) {
 
         }
-        // try {
-        //     await createLineupMessage(data, http, read, modify, persistence, data.user.id);
-        // } catch (err) {
-        //     return context.getInteractionResponder().viewErrorResponse({
-        //         viewId: data.view.id,
-        //         errors: err,
-        //     });
-        // }
         return {
             success: true,
         };
@@ -120,7 +131,11 @@ export class AppsGithubApp extends App {
         //     context: UIActionButtonContext.MESSAGE_BOX_ACTION, // in what context the action button will be displayed in the UI
         // });
 
-
+        await Promise.all(
+            settings.map((setting) =>
+                configuration.settings.provideSetting(setting),
+            ),
+        );
 
         configuration.slashCommands.provideSlashCommand(new GithubSlashcommand(this));
     }

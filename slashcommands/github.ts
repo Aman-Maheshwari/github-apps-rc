@@ -62,12 +62,13 @@ export class GithubSlashcommand implements ISlashCommand {
         let information: string = '';
 
         information += " ```"
-        information += "  1. Fetch user repositories - /github user {username} \n";
-        information += "  2. Fetch a issue           - /github get-issue {owner} {repo} {issue no.}  \n";
-        information += "  3. Connect to repository   - /github connect {repo-url}  \n";
-        information += "  4. Set token               - /github set-token token \n";
-        information += "  5. Create issue            - /github create"
-        information += "  Note currently create command is configured for hard coded owner and repo"
+        information += " 1. Fetch user repositories - /github user {username} \n";
+        information += " 2. Fetch a issue           - /github get-issue {owner} {repo} {issue no.}  \n";
+        information += " 3. Connect to repository   - /github connect {repo-url}  \n";
+        information += " 4. Set token               - /github set-token token \n";
+        information += " 5. Create issue            - /github create";
+        information += " Note currently create command is configured for hard coded owner and repo \n";
+        information += " 6. Search issue            - /github search";
         information += " ``` "
 
         await sendNotification(information, read, modify, context.getSender(), context.getRoom());
