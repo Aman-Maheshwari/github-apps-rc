@@ -34,7 +34,7 @@ export class GithubSDK {
 
     public fetchIssue(owner: string, repoName: string, issueNo: string, page: string) {
         this.logger.debug('fetch issue for page = ', page);
-        return this.get(`${BaseApiHost}${owner}/${repoName}/issues?page=${page}`)
+        return this.get(`${BaseApiHost}${owner}/${repoName}/issues?page=${page}&per_page=5`)
     }
 
     public getRepos(username: string) {

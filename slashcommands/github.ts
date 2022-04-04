@@ -246,21 +246,23 @@ export class GithubSlashcommand implements ISlashCommand {
         try {
             const data = await sdk.fetchIssue(owner, repoName, issueNo, page) as FetchIssue[];
             this.app.getLogger().debug(data);
-            let p: string = ""
+
             const regex: any = /!\[(.*?)\]\((.*?)\)/g;
 
-            p += " ```"
-            data.map((issue) => {
+
+            data.map(async (issue) => {
                 let arr: string[] = [];
                 let m: any;
 
-                // while ((m = regex.exec(issue.body)) !== null) {
-                //     if (m.index === regex.lastIndex) {
-                //         regex.lastIndex++;
-                //     }
-                //     arr.push(m[2])
-                // }
-
+                while ((m = regex.exec(issue.body)) !== null) {
+                    if (m.index === regex.lastIndex) {
+                        regex.lastIndex++;
+                    }
+                    arr.push(m[2])
+                }
+                this.app.getLogger().debug('arr = ', arr);
+                let p: string = ""
+                p += " ```"
                 p += ` issue number - ${issue.number} \n`;
                 p += ` created by   - ${issue.user.login} \n`;
                 p += ` state        - ${issue.state} \n`;
@@ -268,16 +270,18 @@ export class GithubSlashcommand implements ISlashCommand {
                 p += ` repo url     - ${issue.repository_url} \n`;
                 p += ` issue url    - ${issue.url} \n`;
                 p += ` description  - ${issue.body} \n`;
-                p += " --------------------------------------------------------------------------------------------\n"
+                p += " ``` "
+                await sendNotification(p, read, modify, context.getSender(), context.getRoom(), arr);
+
             });
-            p += " ``` "
+
 
 
             // this.app.getLogger().debug("arr = ", arr);
             await persistence.storePreviousCommand(['issue', owner, repoName], context.getSender());
             // await persistence.storeRepoForFetchIssueCommand('issue', context.getSender());
             // await persistence.storeOwnerForFetchIssueCommand('issue', context.getSender());
-            await sendNotification(p, read, modify, context.getSender(), context.getRoom());
+
         } catch (err) {
             console.error(err);
             await sendNotification(err, read, modify, context.getSender(), context.getRoom());
