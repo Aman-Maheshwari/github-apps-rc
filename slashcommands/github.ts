@@ -1,4 +1,5 @@
 import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
+import { RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata';
 import { ISlashCommand, SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
 import { BlockType, ButtonStyle, IImageBlock } from '@rocket.chat/apps-engine/definition/uikit';
 import { AppsGithubApp } from '../AppsGithubApp';
@@ -240,47 +241,22 @@ export class GithubSlashcommand implements ISlashCommand {
             created_at: string,
             repository_url: string,
             url: string,
-            body: string
+            body: string,
+            html_url: string
         };
 
         try {
             const data = await sdk.fetchIssue(owner, repoName, issueNo, page) as FetchIssue[];
-            this.app.getLogger().debug(data);
-
-            const regex: any = /!\[(.*?)\]\((.*?)\)/g;
-
-
             data.map(async (issue) => {
-                let arr: string[] = [];
-                let m: any;
-
-                while ((m = regex.exec(issue.body)) !== null) {
-                    if (m.index === regex.lastIndex) {
-                        regex.lastIndex++;
-                    }
-                    arr.push(m[2])
-                }
-                this.app.getLogger().debug('arr = ', arr);
-                let p: string = ""
-                p += " ```"
-                p += ` issue number - ${issue.number} \n`;
-                p += ` created by   - ${issue.user.login} \n`;
-                p += ` state        - ${issue.state} \n`;
-                p += ` created at   - ${issue.created_at} \n`;
-                p += ` repo url     - ${issue.repository_url} \n`;
-                p += ` issue url    - ${issue.url} \n`;
-                p += ` description  - ${issue.body} \n`;
-                p += " ``` "
-                await sendNotification(p, read, modify, context.getSender(), context.getRoom(), arr);
-
+                const msg = modify
+                    .getCreator()
+                    .startMessage()
+                    .setRoom(context.getRoom())
+                    .setSender(context.getSender());
+                msg.setText(issue.html_url);
+                await modify.getCreator().finish(msg);
             });
-
-
-
-            // this.app.getLogger().debug("arr = ", arr);
             await persistence.storePreviousCommand(['issue', owner, repoName], context.getSender());
-            // await persistence.storeRepoForFetchIssueCommand('issue', context.getSender());
-            // await persistence.storeOwnerForFetchIssueCommand('issue', context.getSender());
 
         } catch (err) {
             console.error(err);
