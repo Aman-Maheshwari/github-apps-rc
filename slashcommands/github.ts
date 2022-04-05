@@ -1,7 +1,5 @@
 import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
-import { RocketChatAssociationModel } from '@rocket.chat/apps-engine/definition/metadata';
 import { ISlashCommand, SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
-import { BlockType, ButtonStyle, IImageBlock } from '@rocket.chat/apps-engine/definition/uikit';
 import { AppsGithubApp } from '../AppsGithubApp';
 import { createModalForIssue } from '../lib/helpers/createModalForIssue';
 import { getWebhookUrl } from '../lib/helpers/getWebhookUrl';
@@ -56,7 +54,7 @@ export class GithubSlashcommand implements ISlashCommand {
                 break;
 
             case Command.User:
-                await this.processUserCommand(context, read, modify, http, persis);
+                await this.processUserCommand(context, read, modify, http, persis, fetch, page);
                 break;
 
             case Command.Help:
@@ -83,17 +81,23 @@ export class GithubSlashcommand implements ISlashCommand {
         information += " ```"
         information += " 1. Fetch user repositories - /github user {username} \n";
         information += " 2. Fetch a issue           - /github issue {owner} {repo} {issue no.}  \n";
-        information += " 3. Connect to repository   - /github connect {repo-url}  \n";
-        information += " 4. Set token               - /github set-token token \n";
-        information += " 5. Create issue            - /github create";
+        information += " 3. Fetch all issue         - /github issue {owner} {repo} "
+        information += " 4. Connect to repository   - /github connect {repo-url}  \n";
+        information += " 5. Set token               - /github set-token token \n";
+        information += " 6. Create issue            - /github create";
         information += " Note currently create command is configured for hard coded owner and repo \n";
-        information += " 6. Search issue            - /github search";
+        information += " 7. Search issue            - /github search";
         information += " ``` "
 
         await sendNotification(information, read, modify, context.getSender(), context.getRoom());
     }
 
-    private async processConnectCommand(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+    private async processConnectCommand(
+        context: SlashCommandContext,
+        read: IRead,
+        modify: IModify,
+        http: IHttp,
+        persis: IPersistence): Promise<void> {
         const [, repoUrl] = context.getArguments();
 
         if (!repoUrl) {
@@ -137,7 +141,12 @@ export class GithubSlashcommand implements ISlashCommand {
         await sendNotification('Successfully connected repo', read, modify, context.getSender(), context.getRoom());
     }
 
-    private async processSetTokenCommand(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+    private async processSetTokenCommand(
+        context: SlashCommandContext,
+        read: IRead,
+        modify: IModify,
+        http: IHttp,
+        persis: IPersistence): Promise<void> {
         const [, accessToken] = context.getArguments();
 
         if (!accessToken) {
@@ -152,43 +161,39 @@ export class GithubSlashcommand implements ISlashCommand {
         await sendNotification('Successfully stored your key', read, modify, context.getSender(), context.getRoom());
     }
 
-    private async processUserCommand(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
-        const [, userName] = context.getArguments();
-        // const persistence = new AppPersistence(persis, read.getPersistenceReader());
-        const accessToken = '123' //await persistence.getUserAccessToken(context.getSender());
-
-        // if (!accessToken) {
-        //     await sendNotification(
-        //         'You haven\'t configured your access key yet. Please run `/github set-token YOUR_ACCESS_TOKEN`',
-        //         read,
-        //         modify,
-        //         context.getSender(),
-        //         context.getRoom(),
-        //     );
-        //     return;
-        // }
-        const sdk = new GithubSDK(http, accessToken, this.app.getLogger());
-        interface githubRepoUser {
-            'repo-name': string,
-            'repo-url': string,
-
+    private async processUserCommand(
+        context: SlashCommandContext,
+        read: IRead,
+        modify: IModify,
+        http: IHttp,
+        persis: IPersistence,
+        fetch: string,
+        page: string = '1'): Promise<void> {
+        let [, userName] = context.getArguments();
+        let result: string | string[] = '';
+        if (fetch == 'p') {
+            const persistence = new AppPersistence(persis, read.getPersistenceReader());
+            result = await persistence.getPreviousCommand(context.getSender()) as string | string[];
+            this.app.getLogger().debug('result = ', result);
+            userName = result[1];
         }
-        try {
-            const userRepos = await sdk.getRepos(userName) as Array<{ full_name: string, html_url: string }>;
 
-            let repositoryInfo: githubRepoUser[] = [];
-            let resppp: string = " ``` ";
-            userRepos.map((repo) => {
-                const p: githubRepoUser = {
-                    'repo-name': repo.full_name,
-                    'repo-url': repo.html_url,
-                }
-                resppp += JSON.stringify(p) + '\n';
-                repositoryInfo.push(p);
+        const persistence = new AppPersistence(persis, read.getPersistenceReader());
+        const accessToken = '123'
+
+        const sdk = new GithubSDK(http, accessToken, this.app.getLogger());
+        try {
+            const userRepos = await sdk.getRepos(userName, page) as Array<{ full_name: string, html_url: string }>;
+            userRepos.map(async (repo) => {
+                const msg = modify
+                    .getCreator()
+                    .startMessage()
+                    .setRoom(context.getRoom())
+                    .setSender(context.getSender());
+                msg.setText(repo.html_url);
+                await modify.getCreator().finish(msg);
             })
-            resppp += " ``` ";
-            // resppp = JSON.stringify(resppp);
-            await sendNotification(` ${resppp} `, read, modify, context.getSender(), context.getRoom());
+            await persistence.storePreviousCommand(['user', userName], context.getSender());
 
         } catch (err) {
             console.error(err);
@@ -219,18 +224,6 @@ export class GithubSlashcommand implements ISlashCommand {
 
         const persistence = new AppPersistence(persis, read.getPersistenceReader());
         const accessToken = '123'
-        // await persistence.getUserAccessToken(context.getSender());
-
-        // if (!accessToken) {
-        //     await sendNotification(
-        //         'You haven\'t configured your access key yet. Please run `/github set-token YOUR_ACCESS_TOKEN`',
-        //         read,
-        //         modify,
-        //         context.getSender(),
-        //         context.getRoom(),
-        //     );
-        //     return;
-        // }
         this.app.getLogger().debug('executing issue command for page = ', owner, repoName)
         const sdk = new GithubSDK(http, accessToken, this.app.getLogger());
 
@@ -264,7 +257,12 @@ export class GithubSlashcommand implements ISlashCommand {
         }
     }
 
-    private async processCreateIssueCommand(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+    private async processCreateIssueCommand(
+        context: SlashCommandContext,
+        read: IRead,
+        modify: IModify,
+        http: IHttp,
+        persis: IPersistence): Promise<void> {
         const [, owner, repoName, title] = context.getArguments();
         const triggerId = context.getTriggerId();
         const data = {
@@ -281,8 +279,8 @@ export class GithubSlashcommand implements ISlashCommand {
             this.app.getLogger().debug("trigger id = ", triggerId);
 
             if (triggerId) {
-                const mdl = await createModalForIssue({ id: 'modalid', persistence: persis, modify, data });
-                this.app.getLogger().debug("modal id = ", mdl);
+                const mdl = await createModalForIssue({ id: 'modalid', persistence: persis, modify,type:'write' });
+                // this.app.getLogger().debug("modal id = ", mdl);
                 await modify.getUiController().openModalView(mdl, { triggerId }, context.getSender());
             }
             // await sendNotification(p, read, modify, context.getSender(), context.getRoom(), arr);
@@ -292,7 +290,12 @@ export class GithubSlashcommand implements ISlashCommand {
         }
     };
 
-    private async processPreviousCommandForNextPage(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence) {
+    private async processPreviousCommandForNextPage(
+        context: SlashCommandContext,
+        read: IRead,
+        modify: IModify,
+        http: IHttp,
+        persis: IPersistence) {
         const persistence = new AppPersistence(persis, read.getPersistenceReader());
         let result = await persistence.getPreviousCommand(context.getSender()) as string | string[];
 

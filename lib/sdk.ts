@@ -10,7 +10,7 @@ export class GithubSDK {
     public createWebhook(repoName: string, webhookUrl: string) {
         return this.post(BaseApiHost + repoName + '/hooks', {
             active: true,
-            events: ['push'],
+            events: ['push','pull_request'],
             config: {
                 url: webhookUrl,
                 content_type: 'json',
@@ -37,9 +37,9 @@ export class GithubSDK {
         return this.get(`${BaseApiHost}${owner}/${repoName}/issues?page=${page}&per_page=5`)
     }
 
-    public getRepos(username: string) {
+    public getRepos(username: string,page: string) {
         this.logger.debug("over here")
-        return this.get(`${base}users/${username}/repos`);
+        return this.get(`${base}users/${username}/repos?page=${page}&per_page=5`);
     }
 
     private async post(url: string, data: any): Promise<any> {

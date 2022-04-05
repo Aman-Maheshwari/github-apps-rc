@@ -2,24 +2,25 @@ import { IModify, IPersistence } from '@rocket.chat/apps-engine/definition/acces
 import { RocketChatAssociationModel, RocketChatAssociationRecord } from '@rocket.chat/apps-engine/definition/metadata';
 import { IUIKitModalViewParam } from '@rocket.chat/apps-engine/definition/uikit/UIKitInteractionResponder';
 
-import { ButtonStyle } from '@rocket.chat/apps-engine/definition/uikit';
+import { ButtonStyle, TextObjectType } from '@rocket.chat/apps-engine/definition/uikit';
 import { IUser } from '@rocket.chat/apps-engine/definition/users';
 import { IUIKitBlockIncomingInteraction } from '@rocket.chat/apps-engine/definition/uikit/UIKitIncomingInteractionTypes';
 
-interface IModalContext extends Partial<IUIKitBlockIncomingInteraction> {
-    threadId?: string;
-}
+// interface IModalContext extends Partial<IUIKitBlockIncomingInteraction> {
+//     threadId?: string;
+// }
 
-export async function createModalForIssue({ id = '', persistence, data, modify }: {
+export async function createModalForIssue({ id = '', persistence, modify, type = 'write' }: {
     id?: string,
     persistence: IPersistence,
-    data: IModalContext,
+    // data: IModalContext,
     modify: IModify,
+    type: string
 }): Promise<IUIKitModalViewParam> {
     const viewId = id;
 
-    const association = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, viewId);
-    await persistence.createWithAssociation(data, association);
+    // const association = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, viewId);
+    // await persistence.createWithAssociation(data, association);
     const block = modify.getCreator().getBlockBuilder();
 
     let st: string = `Please see our guide for opening issues: https://rocket.chat/docs/contributing/reporting-issues
@@ -77,30 +78,59 @@ export async function createModalForIssue({ id = '', persistence, data, modify }
     \n
     <!-- For more information about collecting logs please see: https://rocket.chat/docs/contributing/reporting-issues#gathering-logs -->
     `
-    block.addInputBlock({
-        blockId: 'issue-title',
-        optional: false,
-        element: block.newPlainTextInputElement({
-            actionId: `ititle`,
-            placeholder: block.newPlainTextObject('write the title here'),
-        }),
-        label: block.newPlainTextObject('Title'),
-    });
-    block.addDividerBlock();
 
-    block.addInputBlock({
-        blockId: 'issue-description',
-        optional: false,
-        element: block.newPlainTextInputElement({
-            actionId: `idesc`,
-            placeholder: block.newPlainTextObject("Markdown is supported"),
-            initialValue: st,
-            multiline: true,
-        }),
-        label: block.newPlainTextObject('Description'),
-
+    block.addActionsBlock({
+        blockId: "write/preview",
+        elements: [
+            block.newButtonElement({
+                actionId: "createIssue",
+                text: block.newPlainTextObject("write"),
+                value: "write",
+                style: ButtonStyle.PRIMARY,
+            }),
+            block.newButtonElement({
+                actionId: "createIssue",
+                text: block.newPlainTextObject("preview"),
+                value: "preview",
+                style: ButtonStyle.PRIMARY,
+            }),
+        ],
     });
-    block.newMarkdownTextObject(`# heelo`)
+
+    if (type === 'write') {
+        block.addInputBlock({
+            blockId: 'issue-title',
+            optional: false,
+            element: block.newPlainTextInputElement({
+                actionId: `ititle`,
+                placeholder: block.newPlainTextObject('write the title here'),
+            }),
+            label: block.newPlainTextObject('Title'),
+        });
+        block.addDividerBlock();
+
+        block.addInputBlock({
+            blockId: 'issue-description',
+            optional: false,
+            element: block.newPlainTextInputElement({
+                actionId: `idesc`,
+                placeholder: block.newPlainTextObject("Markdown is supported"),
+                initialValue: st,
+                multiline: true,
+            }),
+            label: block.newPlainTextObject('Description'),
+
+        });
+    }
+    else {
+        block.addSectionBlock({
+            text: block.newMarkdownTextObject('# Hello'),
+        })
+    }
+    // block.addSectionBlock({
+
+    //     text: [block.newMarkdownTextObject()]
+    // })
     block.addDividerBlock();
     return {
         id: viewId,
@@ -113,5 +143,7 @@ export async function createModalForIssue({ id = '', persistence, data, modify }
             text: block.newPlainTextObject('Dismiss'),
         }),
         blocks: block.getBlocks(),
+        clearOnClose: true,
+        notifyOnClose: true
     };
 }

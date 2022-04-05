@@ -7,6 +7,7 @@ import {
     IModify,
     IPersistence,
     IRead,
+    IUIKitInteractionParam,
 } from '@rocket.chat/apps-engine/definition/accessors';
 
 import { ApiSecurity, ApiVisibility } from '@rocket.chat/apps-engine/definition/api';
@@ -14,7 +15,11 @@ import { App } from '@rocket.chat/apps-engine/definition/App';
 import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
 import { ISetting, SettingType } from '@rocket.chat/apps-engine/definition/settings';
 import { UIKitBlockInteractionContext, UIKitViewSubmitInteractionContext } from '@rocket.chat/apps-engine/definition/uikit';
+import { UIKitInteractionResponder } from '@rocket.chat/apps-engine/definition/uikit/UIKitInteractionResponder';
+import { IUser } from '@rocket.chat/apps-engine/definition/users';
 import { WebhookEndpoint } from './endpoints/webhook';
+import { createModalForIssue } from './lib/helpers/createModalForIssue';
+import { toggleModalView } from './lib/helpers/toggleModalView';
 import { GithubSDK } from './lib/sdk';
 import { GithubSlashcommand } from './slashcommands/github';
 
@@ -41,41 +46,32 @@ export class AppsGithubApp extends App {
         super(info, logger, accessors);
     }
 
+
     public async executeBlockActionHandler(
         context: UIKitBlockInteractionContext,
         read: IRead,
         http: IHttp,
         persistence: IPersistence,
-        modify: IModify
+        modify: IModify,
     ) {
         const data = context.getInteractionData();
         const { actionId } = data;
 
+        this.getLogger().debug('action id =========', actionId);
         switch (actionId) {
-            case "create": {
+            case "createIssue": {
                 try {
-                    this.getLogger().debug("gotinter")
-                    const data = context.getInteractionData();
+                    this.getLogger().debug('data.value === ', data.value);
+                    if (data.value === 'write') {
+                        const mdl = await createModalForIssue({ id: 'modalid', persistence, modify, type: 'write' });
+                        return context.getInteractionResponder().updateModalViewResponse(mdl);
+                    }
 
-                    this.getLogger().debug(data);
-                    return {
-                        success: true,
-                    };
-                } catch (err) {
-                    console.error(err);
-                    return {
-                        success: false,
-                    };
-                }
-
-            }
-
-            case "aman": {
-                try {
-                    this.getLogger().debug("aman")
-                    const data = context.getInteractionData();
-
-                    this.getLogger().debug(data);
+                    else if (data.value === 'preview') {
+                        const mdl = await createModalForIssue({ id: 'modalid', persistence, modify, type: 'preview' });
+                        this.getLogger().debug('mdl = ', mdl)
+                        return context.getInteractionResponder().updateModalViewResponse(mdl);
+                    }
                     return {
                         success: true,
                     };
