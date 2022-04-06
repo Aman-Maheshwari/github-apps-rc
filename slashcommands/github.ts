@@ -279,7 +279,12 @@ export class GithubSlashcommand implements ISlashCommand {
             this.app.getLogger().debug("trigger id = ", triggerId);
 
             if (triggerId) {
-                const mdl = await createModalForIssue({ id: 'modalid', persistence: persis, modify,type:'write' });
+                const mdl = await createModalForIssue({
+                    id: 'modalid', persistence: persis, modify, type: 'write', content: {
+                        'issue-title': { ititle: '' },
+                        'issue-description': { idesc: '' }
+                    }
+                });
                 // this.app.getLogger().debug("modal id = ", mdl);
                 await modify.getUiController().openModalView(mdl, { triggerId }, context.getSender());
             }

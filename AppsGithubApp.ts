@@ -14,12 +14,11 @@ import { ApiSecurity, ApiVisibility } from '@rocket.chat/apps-engine/definition/
 import { App } from '@rocket.chat/apps-engine/definition/App';
 import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
 import { ISetting, SettingType } from '@rocket.chat/apps-engine/definition/settings';
-import { UIKitBlockInteractionContext, UIKitViewSubmitInteractionContext } from '@rocket.chat/apps-engine/definition/uikit';
-import { UIKitInteractionResponder } from '@rocket.chat/apps-engine/definition/uikit/UIKitInteractionResponder';
+import { IUIKitResponse, IUIKitSurface, UIKitActionButtonInteractionContext, UIKitBlockInteractionContext, UIKitViewCloseInteractionContext, UIKitViewSubmitInteractionContext } from '@rocket.chat/apps-engine/definition/uikit';
+import { IUIKitModalViewParam, UIKitInteractionResponder } from '@rocket.chat/apps-engine/definition/uikit/UIKitInteractionResponder';
 import { IUser } from '@rocket.chat/apps-engine/definition/users';
 import { WebhookEndpoint } from './endpoints/webhook';
 import { createModalForIssue } from './lib/helpers/createModalForIssue';
-import { toggleModalView } from './lib/helpers/toggleModalView';
 import { GithubSDK } from './lib/sdk';
 import { GithubSlashcommand } from './slashcommands/github';
 
@@ -46,51 +45,70 @@ export class AppsGithubApp extends App {
         super(info, logger, accessors);
     }
 
+    // public async executeActionButtonHandler(
+    //     context: UIKitActionButtonInteractionContext,
+    //     read: IRead,
+    //     http: IHttp,
+    //     persistence: IPersistence,
+    //     modify: IModify): Promise<IUIKitResponse> {
 
-    public async executeBlockActionHandler(
-        context: UIKitBlockInteractionContext,
+    //     const data = context.getInteractionData();
+
+    //     data
+
+    //     return context.getInteractionResponder().successResponse()
+    // }
+    // public async executeBlockActionHandler(
+    //     context: UIKitBlockInteractionContext,
+    //     read: IRead,
+    //     http: IHttp,
+    //     persistence: IPersistence,
+    //     modify: IModify,
+    // ) {
+    //     const data = context.getInteractionData();
+    //     const { actionId } = data;
+
+    //     this.getLogger().debug('action id =========', actionId);
+    //     switch (actionId) {
+    //         case "createIssue": {
+    //             try {
+    //                 let mdl: IUIKitModalViewParam;
+    //                 if (data.value === 'write') {
+    //                     mdl = await createModalForIssue({ id: 'modalid', persistence, modify, type: 'write' });
+    //                     return context.getInteractionResponder().updateModalViewResponse(mdl);
+    //                 }
+
+    //                 else if (data.value === 'preview') {
+    //                     mdl = await createModalForIssue({ id: 'modalid', persistence, modify, type: 'preview' });
+    //                     this.getLogger().debug('mdl = ', mdl)
+    //                     return context.getInteractionResponder().updateModalViewResponse(mdl);
+    //                 }
+    //                 return {
+    //                     success: true,
+    //                 };
+    //             } catch (err) {
+    //                 console.error(err);
+    //                 return {
+    //                     success: false,
+    //                 };
+    //             }
+    //         }
+    //     }
+
+    //     return {
+    //         success: false,
+    //     };
+    // }
+
+    public async executeViewClosedHandler(
+        context: UIKitViewCloseInteractionContext,
         read: IRead,
         http: IHttp,
         persistence: IPersistence,
-        modify: IModify,
-    ) {
+        modify: IModify): Promise<IUIKitResponse> {
+
         const data = context.getInteractionData();
-        const { actionId } = data;
 
-        this.getLogger().debug('action id =========', actionId);
-        switch (actionId) {
-            case "createIssue": {
-                try {
-                    this.getLogger().debug('data.value === ', data.value);
-                    if (data.value === 'write') {
-                        const mdl = await createModalForIssue({ id: 'modalid', persistence, modify, type: 'write' });
-                        return context.getInteractionResponder().updateModalViewResponse(mdl);
-                    }
-
-                    else if (data.value === 'preview') {
-                        const mdl = await createModalForIssue({ id: 'modalid', persistence, modify, type: 'preview' });
-                        this.getLogger().debug('mdl = ', mdl)
-                        return context.getInteractionResponder().updateModalViewResponse(mdl);
-                    }
-                    return {
-                        success: true,
-                    };
-                } catch (err) {
-                    console.error(err);
-                    return {
-                        success: false,
-                    };
-                }
-            }
-        }
-
-        return {
-            success: false,
-        };
-    }
-
-    public async executeViewSubmitHandler(context: UIKitViewSubmitInteractionContext, read: IRead, http: IHttp, persistence: IPersistence, modify: IModify) {
-        const data = context.getInteractionData();
         const { state }: {
             state: {
                 'issue-title': {
@@ -98,15 +116,58 @@ export class AppsGithubApp extends App {
                 },
                 'issue-description': {
                     idesc: string
-                }
+                },
+            },
+        } = data.view as any;
+        this.getLogger().debug('data view = ', data.view)
+
+        if (data.view.title.text === 'Create Issue/preview') {
+            try {
+                const sdk = new GithubSDK(http, '123', this.getLogger());
+                await sdk.createIssue('Aman-Maheshwari', 'getwork', state['issue-title'], state['issue-description']);
+            } catch (error) {
+
+            }
+        }
+        return {
+            success: true,
+        };
+
+    };
+
+
+    public async executeViewSubmitHandler(
+        context: UIKitViewSubmitInteractionContext,
+        read: IRead,
+        http: IHttp,
+        persistence: IPersistence,
+        modify: IModify) {
+        const data = context.getInteractionData();
+
+        const { state }: {
+            state: {
+                'issue-title': {
+                    ititle: string,
+                },
+                'issue-description': {
+                    idesc: string
+                },
             },
         } = data.view as any;
 
-        this.getLogger().debug("data view = ", data.view);
-        try {
-            const sdk = new GithubSDK(http, '123', this.getLogger());
-            await sdk.createIssue('Aman-Maheshwari', 'getwork', state['issue-title'], state['issue-description']);
-        } catch (error) {
+        let mdl: IUIKitModalViewParam;
+        if (data.view.title.text === 'Create Issue/write') {
+            mdl = await createModalForIssue({
+                id: 'modalid', persistence, modify, type: 'preview', content: state
+            });
+            return context.getInteractionResponder().updateModalViewResponse(mdl);
+        }
+
+        else if (data.view.title.text === 'Create Issue/preview') {
+            mdl = await createModalForIssue({
+                id: 'modalid', persistence, modify, type: 'write', content: state
+            });
+            return context.getInteractionResponder().updateModalViewResponse(mdl);
 
         }
         return {

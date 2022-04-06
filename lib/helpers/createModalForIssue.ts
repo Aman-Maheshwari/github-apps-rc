@@ -3,20 +3,31 @@ import { RocketChatAssociationModel, RocketChatAssociationRecord } from '@rocket
 import { IUIKitModalViewParam } from '@rocket.chat/apps-engine/definition/uikit/UIKitInteractionResponder';
 
 import { ButtonStyle, TextObjectType } from '@rocket.chat/apps-engine/definition/uikit';
-import { IUser } from '@rocket.chat/apps-engine/definition/users';
-import { IUIKitBlockIncomingInteraction } from '@rocket.chat/apps-engine/definition/uikit/UIKitIncomingInteractionTypes';
 
-// interface IModalContext extends Partial<IUIKitBlockIncomingInteraction> {
-//     threadId?: string;
-// }
 
-export async function createModalForIssue({ id = '', persistence, modify, type = 'write' }: {
-    id?: string,
-    persistence: IPersistence,
-    // data: IModalContext,
-    modify: IModify,
-    type: string
-}): Promise<IUIKitModalViewParam> {
+export async function createModalForIssue(
+    {
+        id = '',
+        persistence,
+        modify,
+        type = 'write',
+        content,
+    }:
+        {
+            id?: string,
+            persistence: IPersistence,
+            // data: IModalContext,
+            modify: IModify,
+            type: string,
+            content: {
+                'issue-title': {
+                    ititle: string,
+                },
+                'issue-description': {
+                    idesc: string
+                }
+            }
+        }): Promise<IUIKitModalViewParam> {
     const viewId = id;
 
     // const association = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, viewId);
@@ -79,24 +90,6 @@ export async function createModalForIssue({ id = '', persistence, modify, type =
     <!-- For more information about collecting logs please see: https://rocket.chat/docs/contributing/reporting-issues#gathering-logs -->
     `
 
-    block.addActionsBlock({
-        blockId: "write/preview",
-        elements: [
-            block.newButtonElement({
-                actionId: "createIssue",
-                text: block.newPlainTextObject("write"),
-                value: "write",
-                style: ButtonStyle.PRIMARY,
-            }),
-            block.newButtonElement({
-                actionId: "createIssue",
-                text: block.newPlainTextObject("preview"),
-                value: "preview",
-                style: ButtonStyle.PRIMARY,
-            }),
-        ],
-    });
-
     if (type === 'write') {
         block.addInputBlock({
             blockId: 'issue-title',
@@ -104,6 +97,7 @@ export async function createModalForIssue({ id = '', persistence, modify, type =
             element: block.newPlainTextInputElement({
                 actionId: `ititle`,
                 placeholder: block.newPlainTextObject('write the title here'),
+                initialValue: content['issue-title'].ititle
             }),
             label: block.newPlainTextObject('Title'),
         });
@@ -115,7 +109,7 @@ export async function createModalForIssue({ id = '', persistence, modify, type =
             element: block.newPlainTextInputElement({
                 actionId: `idesc`,
                 placeholder: block.newPlainTextObject("Markdown is supported"),
-                initialValue: st,
+                initialValue: st || content['issue-description'].idesc,
                 multiline: true,
             }),
             label: block.newPlainTextObject('Description'),
@@ -124,7 +118,12 @@ export async function createModalForIssue({ id = '', persistence, modify, type =
     }
     else {
         block.addSectionBlock({
-            text: block.newMarkdownTextObject('# Hello'),
+            text: block.newMarkdownTextObject(content['issue-title'].ititle)
+        });
+
+        block.addDividerBlock();
+        block.addSectionBlock({
+            text: block.newMarkdownTextObject(content['issue-description'].idesc)
         })
     }
     // block.addSectionBlock({
@@ -134,16 +133,16 @@ export async function createModalForIssue({ id = '', persistence, modify, type =
     block.addDividerBlock();
     return {
         id: viewId,
-        title: block.newPlainTextObject('Create Issue'),
+        title: type === 'write' ? block.newPlainTextObject('Create Issue/write') : block.newPlainTextObject('Create Issue/preview'),
         submit: block.newButtonElement({
-            text: block.newPlainTextObject('Create'),
+            text: type === 'write' ? block.newPlainTextObject('Preivew') : block.newPlainTextObject('Write'),
             style: ButtonStyle.DANGER,
         }),
         close: block.newButtonElement({
-            text: block.newPlainTextObject('Dismiss'),
+            text: type === 'preview' ? block.newPlainTextObject('Create') : block.newPlainTextObject('Dismiss'),
         }),
         blocks: block.getBlocks(),
         clearOnClose: true,
-        notifyOnClose: true
+        notifyOnClose: true,
     };
 }
