@@ -14,11 +14,11 @@ export class WebhookEndpoint extends ApiEndpoint {
         persis: IPersistence,
     ): Promise<IApiResponse> {
         const sender = await read.getUserReader().getById('rocket.cat');
-
-        if (request.headers['x-github-event'] !== 'push') {
+        if (request.headers['x-github-event'] !== 'issues') {
             return this.success();
         }
 
+        this.app.getLogger().debug('sender - ', sender);
         let payload: any;
 
         if (request.headers['content-type'] === 'application/x-www-form-urlencoded') {
@@ -36,22 +36,22 @@ export class WebhookEndpoint extends ApiEndpoint {
         }
 
         const room = await read.getRoomReader().getById(roomId);
-
         if (!room) {
             return this.success();
         }
 
-        const message = modify.getCreator().startMessage({
-            room,
-            sender,
-            avatarUrl: payload.sender.avatar_url,
-            alias: payload.sender.login,
-            text: `[${payload.sender.login}](${payload.sender.html_url}) just pushed ${
-                payload.commits.length
-            } commits to [${payload.repository.full_name}](${payload.repository.html_url})`,
-        });
 
-        modify.getCreator().finish(message);
+        const message = modify.getCreator().startMessage()
+            .setRoom(room)
+            // .setSender(sender)
+            .setAvatarUrl(payload.sender.avatar_url)
+            .setText(`[${payload.sender.login}](${payload.issue.user.html_url}) created issue 
+            ${payload.issue.html_url} 
+            in repository [${payload.repository.full_name}](${payload.repository.html_url})`)
+            .setUsernameAlias('git-bot');
+
+
+        await modify.getCreator().finish(message);
 
         return this.success();
     }

@@ -126,10 +126,7 @@ export async function createModalForIssue(
             text: block.newMarkdownTextObject(content['issue-description'].idesc)
         })
     }
-    // block.addSectionBlock({
 
-    //     text: [block.newMarkdownTextObject()]
-    // })
     block.addDividerBlock();
     return {
         id: viewId,

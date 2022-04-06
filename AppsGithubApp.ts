@@ -45,61 +45,6 @@ export class AppsGithubApp extends App {
         super(info, logger, accessors);
     }
 
-    // public async executeActionButtonHandler(
-    //     context: UIKitActionButtonInteractionContext,
-    //     read: IRead,
-    //     http: IHttp,
-    //     persistence: IPersistence,
-    //     modify: IModify): Promise<IUIKitResponse> {
-
-    //     const data = context.getInteractionData();
-
-    //     data
-
-    //     return context.getInteractionResponder().successResponse()
-    // }
-    // public async executeBlockActionHandler(
-    //     context: UIKitBlockInteractionContext,
-    //     read: IRead,
-    //     http: IHttp,
-    //     persistence: IPersistence,
-    //     modify: IModify,
-    // ) {
-    //     const data = context.getInteractionData();
-    //     const { actionId } = data;
-
-    //     this.getLogger().debug('action id =========', actionId);
-    //     switch (actionId) {
-    //         case "createIssue": {
-    //             try {
-    //                 let mdl: IUIKitModalViewParam;
-    //                 if (data.value === 'write') {
-    //                     mdl = await createModalForIssue({ id: 'modalid', persistence, modify, type: 'write' });
-    //                     return context.getInteractionResponder().updateModalViewResponse(mdl);
-    //                 }
-
-    //                 else if (data.value === 'preview') {
-    //                     mdl = await createModalForIssue({ id: 'modalid', persistence, modify, type: 'preview' });
-    //                     this.getLogger().debug('mdl = ', mdl)
-    //                     return context.getInteractionResponder().updateModalViewResponse(mdl);
-    //                 }
-    //                 return {
-    //                     success: true,
-    //                 };
-    //             } catch (err) {
-    //                 console.error(err);
-    //                 return {
-    //                     success: false,
-    //                 };
-    //             }
-    //         }
-    //     }
-
-    //     return {
-    //         success: false,
-    //     };
-    // }
-
     public async executeViewClosedHandler(
         context: UIKitViewCloseInteractionContext,
         read: IRead,

@@ -10,7 +10,7 @@ export class GithubSDK {
     public createWebhook(repoName: string, webhookUrl: string) {
         return this.post(BaseApiHost + repoName + '/hooks', {
             active: true,
-            events: ['push','pull_request'],
+            events: ['push','pull_request','issues'],
             config: {
                 url: webhookUrl,
                 content_type: 'json',

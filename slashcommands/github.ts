@@ -81,7 +81,7 @@ export class GithubSlashcommand implements ISlashCommand {
         information += " ```"
         information += " 1. Fetch user repositories - /github user {username} \n";
         information += " 2. Fetch a issue           - /github issue {owner} {repo} {issue no.}  \n";
-        information += " 3. Fetch all issue         - /github issue {owner} {repo} "
+        information += " 3. Fetch all issue         - /github issue {owner} {repo} \n"
         information += " 4. Connect to repository   - /github connect {repo-url}  \n";
         information += " 5. Set token               - /github set-token token \n";
         information += " 6. Create issue            - /github create";
@@ -128,10 +128,12 @@ export class GithubSlashcommand implements ISlashCommand {
 
         const sdk = new GithubSDK(http, accessToken, this.app.getLogger());
 
+        this.app.getLogger().debug('repoName = ', repoName);
         try {
             await sdk.createWebhook(repoName, await getWebhookUrl(this.app));
         } catch (err) {
-            console.error(err);
+            this.app.getLogger().debug('err = ', err);
+
             await sendNotification('Error connecting to the repo', read, modify, context.getSender(), context.getRoom());
             return;
         }

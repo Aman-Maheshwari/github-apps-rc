@@ -32,6 +32,12 @@
         },
         {
             "name": "persistence"
+        },
+        {
+            "name": "server-setting.read"
+        },
+        {
+            "name": "room.read"
         }
     ],
     "name": "Apps.Github",
