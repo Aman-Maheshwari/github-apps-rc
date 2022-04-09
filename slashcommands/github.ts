@@ -2,10 +2,10 @@ import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/de
 import { ISlashCommand, SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
 import { AppsGithubApp } from '../AppsGithubApp';
 import { createModalForIssue } from '../lib/helpers/createModalForIssue';
-import { getWebhookUrl } from '../lib/helpers/getWebhookUrl';
+import { createSubscribeToEventModal } from '../lib/helpers/createSubscribeToEventModal';
 import { sendNotification } from '../lib/helpers/sendNotification';
 import { AppPersistence } from '../lib/persistence';
-import { getRepoName, GithubSDK } from '../lib/sdk';
+import { GithubSDK } from '../lib/sdk';
 
 enum Command {
     Connect = 'connect',
@@ -14,7 +14,8 @@ enum Command {
     Help = 'help',
     Issue = 'issue',
     Create = 'create',
-    Previos = '/'
+    Previous = '/',
+    Subscribe = 'subscribe'
 }
 
 export class GithubSlashcommand implements ISlashCommand {
@@ -30,6 +31,12 @@ export class GithubSlashcommand implements ISlashCommand {
 
         this.app.getLogger().log("command = ", command);
         const page = '1';
+        context.getSender();
+        const persistence = new AppPersistence(persis, read.getPersistenceReader());
+        const user_from_storage = await persistence.getUser();
+        if (!user_from_storage) {
+            await persistence.setUser(context.getSender());
+        }
         await this.availableCommands(command, context, read, modify, http, persis, page, 'n');
     }
 
@@ -67,17 +74,26 @@ export class GithubSlashcommand implements ISlashCommand {
             case Command.Create:
                 await this.processCreateIssueCommand(context, read, modify, http, persis);
                 break;
-            case Command.Previos:
+            case Command.Previous:
                 await this.processPreviousCommandForNextPage(context, read, modify, http, persis);
+                break;
+            case Command.Subscribe:
+                await this.processSubscribeCommand(context, read, modify, http, persis);
                 break;
 
         }
     }
 
-    private async processHelpCommand(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+    private async processHelpCommand(
+        context: SlashCommandContext,
+        read: IRead,
+        modify: IModify,
+        http: IHttp,
+        persis: IPersistence): Promise<void> {
 
         let information: string = '';
 
+        this.app.getLogger().debug(context.getSender());
         information += " ```"
         information += " 1. Fetch user repositories - /github user {username} \n";
         information += " 2. Fetch a issue           - /github issue {owner} {repo} {issue no.}  \n";
@@ -98,19 +114,6 @@ export class GithubSlashcommand implements ISlashCommand {
         modify: IModify,
         http: IHttp,
         persis: IPersistence): Promise<void> {
-        const [, repoUrl] = context.getArguments();
-
-        if (!repoUrl) {
-            await sendNotification('Usage: `/github connect REPO_URL`', read, modify, context.getSender(), context.getRoom());
-            return;
-        }
-
-        const repoName = getRepoName(repoUrl);
-
-        if (!repoName) {
-            await sendNotification('Invalid GitHub repo address', read, modify, context.getSender(), context.getRoom());
-            return;
-        }
 
         const persistence = new AppPersistence(persis, read.getPersistenceReader());
         const accessToken = await persistence.getUserAccessToken(context.getSender());
@@ -126,21 +129,25 @@ export class GithubSlashcommand implements ISlashCommand {
             return;
         }
 
-        const sdk = new GithubSDK(http, accessToken, this.app.getLogger());
-
-        this.app.getLogger().debug('repoName = ', repoName);
+        const triggerId = context.getTriggerId();
         try {
-            await sdk.createWebhook(repoName, await getWebhookUrl(this.app));
+            if (triggerId) {
+                const mdl = await createSubscribeToEventModal({
+                    id: 'subscribeid',
+                    persistence: persis,
+                    modify,
+                    logger: this.app.getLogger(),
+                    roomId: context.getRoom()
+                });
+                const persistence = new AppPersistence(persis, read.getPersistenceReader());
+                await persistence.setRoom(context.getRoom(), context.getSender());
+                await modify.getUiController().openModalView(mdl, { triggerId }, context.getSender());
+            }
+
         } catch (err) {
-            this.app.getLogger().debug('err = ', err);
-
-            await sendNotification('Error connecting to the repo', read, modify, context.getSender(), context.getRoom());
-            return;
+            console.error(err);
+            // await sendNotification(err, read, modify, context.getSender(), context.getRoom());
         }
-
-        await persistence.connectRepoToRoom(repoName, context.getRoom());
-
-        await sendNotification('Successfully connected repo', read, modify, context.getSender(), context.getRoom());
     }
 
     private async processSetTokenCommand(
@@ -295,6 +302,36 @@ export class GithubSlashcommand implements ISlashCommand {
             console.error(err);
             // await sendNotification(err, read, modify, context.getSender(), context.getRoom());
         }
+    };
+
+    private async processSubscribeCommand(
+        context: SlashCommandContext,
+        read: IRead,
+        modify: IModify,
+        http: IHttp,
+        persis: IPersistence): Promise<void> {
+
+        //open modal and select state to subscribe
+        const [, owner, repoName, title] = context.getArguments();
+        const triggerId = context.getTriggerId();
+        const data = {
+            room: (context.getRoom() as any).value,
+            threadId: context.getThreadId()
+        }; // the current room
+        // const persistence = new AppPersistence(persis, read.getPersistenceReader());
+        const accessToken = '123' //await persistence.getUserAccessToken(context.getSender());
+        const sdk = new GithubSDK(http, accessToken, this.app.getLogger());
+        try {
+            if (triggerId) {
+                const mdl = await createSubscribeToEventModal({ id: 'subscribeid', persistence: persis, modify, logger: this.app.getLogger(), roomId: context.getRoom() });
+                await modify.getUiController().openModalView(mdl, { triggerId }, context.getSender());
+            }
+
+        } catch (err) {
+            console.error(err);
+            // await sendNotification(err, read, modify, context.getSender(), context.getRoom());
+        }
+
     };
 
     private async processPreviousCommandForNextPage(

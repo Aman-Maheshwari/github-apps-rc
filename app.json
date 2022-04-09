@@ -41,7 +41,7 @@
         }
     ],
     "name": "Apps.Github",
-    "nameSlug": "appsgithub",
+    "nameSlug": "git-bot",
     "classFile": "AppsGithubApp.ts",
     "description": "Integrates GitHub with your RC",
     "implements": []

@@ -10,3 +10,8 @@ export async function getWebhookUrl(app: AppsGithubApp): Promise<string> {
 
     return siteUrl + webhookEndpoint.computedPath;
 }
+
+// export async function getUser(app: AppsGithubApp) {
+
+//     app.getAccessors().
+// }

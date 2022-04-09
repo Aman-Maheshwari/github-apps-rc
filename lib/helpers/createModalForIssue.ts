@@ -1,8 +1,7 @@
 import { IModify, IPersistence } from '@rocket.chat/apps-engine/definition/accessors';
-import { RocketChatAssociationModel, RocketChatAssociationRecord } from '@rocket.chat/apps-engine/definition/metadata';
 import { IUIKitModalViewParam } from '@rocket.chat/apps-engine/definition/uikit/UIKitInteractionResponder';
 
-import { ButtonStyle, TextObjectType } from '@rocket.chat/apps-engine/definition/uikit';
+import { ButtonStyle } from '@rocket.chat/apps-engine/definition/uikit';
 
 
 export async function createModalForIssue(

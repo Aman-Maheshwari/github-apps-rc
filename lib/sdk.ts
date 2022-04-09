@@ -1,4 +1,6 @@
-import { IHttp, ILogger } from '@rocket.chat/apps-engine/definition/accessors';
+import { IHttp, ILogger, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
+import { IUser } from '@rocket.chat/apps-engine/definition/users';
+import { AppPersistence } from './persistence';
 
 const BaseHost = 'https://github.com/';
 const BaseApiHost = 'https://api.github.com/repos/';
@@ -7,10 +9,17 @@ const base = 'https://api.github.com/';
 export class GithubSDK {
     constructor(private readonly http: IHttp, private readonly accessToken, public logger: ILogger) { }
 
-    public createWebhook(repoName: string, webhookUrl: string) {
+    public async createWebhook(
+        repoName: string,
+        webhookUrl: string,
+        persistence: IPersistence,
+        read: IRead,
+        user: IUser) {
+        const persi = new AppPersistence(persistence, read.getPersistenceReader());
+        const result = await persi.getSubscribedEventsForWebhook(user);
         return this.post(BaseApiHost + repoName + '/hooks', {
             active: true,
-            events: ['push','pull_request','issues'],
+            events: result,
             config: {
                 url: webhookUrl,
                 content_type: 'json',
@@ -33,12 +42,10 @@ export class GithubSDK {
     }
 
     public fetchIssue(owner: string, repoName: string, issueNo: string, page: string) {
-        this.logger.debug('fetch issue for page = ', page);
         return this.get(`${BaseApiHost}${owner}/${repoName}/issues?page=${page}&per_page=5`)
     }
 
-    public getRepos(username: string,page: string) {
-        this.logger.debug("over here")
+    public getRepos(username: string, page: string) {
         return this.get(`${base}users/${username}/repos?page=${page}&per_page=5`);
     }
 
@@ -57,7 +64,6 @@ export class GithubSDK {
         });
 
         // If it isn't a 2xx code, something wrong happened
-        this.logger.debug('response = ', response);
         if (!response.statusCode.toString().startsWith('2')) {
             throw response;
         }

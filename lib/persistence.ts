@@ -55,4 +55,50 @@ export class AppPersistence {
 
         return result ? (result as any).command : undefined;
     }
+
+    public async storeSubscribedEventsForWebhook(value: string[] | string | undefined, user: IUser): Promise<void> {
+        const userAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, user.id);
+        const eventAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'subs-events-list');
+
+        await this.persistence.updateByAssociations([userAssociation, eventAssociation], { value }, true);
+    }
+
+    public async getSubscribedEventsForWebhook(user: IUser): Promise<string[] | undefined> {
+        const userAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, user.id);
+        const eventAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'subs-events-list');
+
+        const [result] = await this.persistenceRead.readByAssociations([userAssociation, eventAssociation]);
+
+        return result ? (result as any).value : undefined;
+    }
+
+    public async setRoom(room: IRoom, user: IUser): Promise<void> {
+        const userAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, user.id);
+        const eventAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'set-room');
+        await this.persistence.updateByAssociations([userAssociation, eventAssociation], { room }, true);
+    };
+
+
+    public async getRoom(user: IUser): Promise<IRoom> {
+        const userAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, user.id);
+        const eventAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'set-room');
+        const [result] = await this.persistenceRead.readByAssociations([userAssociation, eventAssociation]);
+
+        return result ? (result as any).room : undefined;
+    }
+
+    public async setUser(user: IUser): Promise<void> {
+        // const userAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, user.id);
+        const eventAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'set-user');
+        await this.persistence.updateByAssociations([eventAssociation], { user }, true);
+    };
+
+
+    public async getUser(): Promise<IUser> {
+        // const userAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, user.id);
+        const eventAssociation = new RocketChatAssociationRecord(RocketChatAssociationModel.MISC, 'set-user');
+        const [result] = await this.persistenceRead.readByAssociations([eventAssociation]);
+
+        return result ? (result as any).user : undefined;
+    }
 }
